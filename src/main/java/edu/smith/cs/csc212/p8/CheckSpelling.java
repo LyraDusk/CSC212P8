@@ -1,12 +1,15 @@
 package edu.smith.cs.csc212.p8;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -30,6 +33,23 @@ public class CheckSpelling {
 		return words;
 	}
 	
+	public static List<String> loadBook() {
+		List<String> output = new ArrayList<>();
+		try {
+			List<String> words = Files.readAllLines(new File("src/main/resources/shakespeare.txt").toPath());
+			for (String w : words) {
+				List<String> wlist = WordSplitter.splitTextToWords(w);
+				for (String word : wlist) {
+					output.add(word);
+				}
+			}
+			return output;
+		} catch (IOException e) {
+			throw new RuntimeException("Couldn't find book", e);
+		}
+		
+	}
+	
 	/**
 	 * This method looks for all the words in a dictionary.
 	 * @param words - the "queries"
@@ -42,6 +62,8 @@ public class CheckSpelling {
 		for (String w : words) {
 			if (dictionary.contains(w)) {
 				found++;
+			} else {
+				//System.out.println(w);
 			}
 		}
 		
@@ -49,13 +71,23 @@ public class CheckSpelling {
 		double fractionFound = found / (double) words.size();
 		double timeSpentPerItem = (endLookup - startLookup) / ((double) words.size());
 		int nsPerItem = (int) timeSpentPerItem;
+		//System.out.println(words.size());
 		System.out.println(dictionary.getClass().getSimpleName()+": Lookup of items found="+fractionFound+" time="+nsPerItem+" ns/item");
 	}
 	
 	public static List<String> createMixedDataset(List<String> yesWords, int numSamples, double fractionYes) {
 		// Hint to the ArrayList that it will need to grow to numSamples size:
 		List<String> output = new ArrayList<>(numSamples);
-		// TODO: select numSamples * fractionYes words from yesWords; create the rest as no words.
+		int numYes = (int) (numSamples * fractionYes);
+		Random rand = new Random();
+		for (int i = 0; i < numYes; i ++) {
+			int index = rand.nextInt(numYes);
+			String word = yesWords.get(index);
+			output.add(word);
+		} 
+		for (int i = numYes; i <= numSamples; i++) {
+			output.add("asdfghjklqwertyuiop");
+		}
 		return output;
 	}
 	
@@ -69,6 +101,10 @@ public class CheckSpelling {
 		HashSet<String> hashOfWords = new HashSet<>(listOfWords);
 		SortedStringListSet bsl = new SortedStringListSet(listOfWords);
 		CharTrie trie = new CharTrie();
+		
+		
+		List<String> shakespeare = loadBook();
+		
 		for (String w : listOfWords) {
 			trie.insert(w);
 		}
@@ -96,8 +132,12 @@ public class CheckSpelling {
 			timeLookup(hitsAndMisses, trie);
 			timeLookup(hitsAndMisses, hm100k);
 		}
-			
-
+		System.out.println("Loading Shakespeare...");	
+		timeLookup(shakespeare, treeOfWords);
+		timeLookup(shakespeare, hashOfWords);
+		timeLookup(shakespeare, bsl);
+		timeLookup(shakespeare, trie);
+		timeLookup(shakespeare, hm100k);
 		
 		// --- linear list timing:
 		// Looking up in a list is so slow, we need to sample:
